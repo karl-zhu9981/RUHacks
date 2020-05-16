@@ -1,8 +1,14 @@
 use std::io::Read;
-use rocket::response::{Body, Responder};
+use rocket::response::{Body, Responder, status};
 use std::option::NoneError;
-use rocket::Request;
+use rocket::{Request, http, Data};
 use std::error::Error;
+use std::fmt::Display;
+use serde::export::Formatter;
+use serde::export::fmt::Debug;
+use rocket::request::{FromRequest, Outcome};
+use rocket::outcome::IntoOutcome;
+use rocket::data::{FromData, Transformed, Transform, FromDataSimple};
 
 pub struct UserItem{
     hash_addr: [u8;64],
@@ -12,19 +18,12 @@ pub struct UserItem{
     blind_key: Box<[u8]>
 }
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,FromForm,Debug)]
 pub struct UserAuth{
     userid: String,
     password: String
 }
 
-impl UserAuth{
-    pub fn read<R: Read>(b: Body<R>) -> Result<Self,AuthError>{
-        let s = b.into_string()?;
-        let ret = serde_json::from_str(&s)?;
-        Ok(ret)
-    }
-}
 
 #[derive(Serialize,Deserialize,Debug)]
 pub enum UserAuthResponse{
@@ -45,19 +44,26 @@ impl From<Result<&'_ UserItem,UserAuthResponse>> for UserAuthResponse{
     }
 }
 
+fn from_code(code: u32) -> rocket::http::Status{
+    match code{
+        0 => http::Status::from_code(404),
+        1 => http::Status::from_code(401),
+        2 => http::Status::from_code(403),
+        _ => http::Status::from_code(500)
+    }.unwrap()
+}
+
 impl<'r> Responder<'r> for UserAuthResponse{
-    fn respond_to(self, request: &Request<'r>) -> rocket::request::Result<'r> {
-        let st = serde_json::to_string(&self)?;
-        st.respond_to(request)
+    fn respond_to(self, request: &Request<'_>) -> rocket::response::Result<'r> {
+        let st = serde_json::to_string(&self).map_err(|s|rocket::http::Status::from_code(500).unwrap())?;
+        if let UserAuthResponse::Error {code,msg} = &self{
+            status::Custom(from_code(*code),st).respond_to(request)
+        }else{
+            st.respond_to(request)
+        }
     }
 }
 
-impl<'r> Responder<'r> for Result<&'_ UserItem,UserAuthResponse>{
-    fn respond_to(self, request: &Request<'r>) -> rocket::request::Result<'r> {
-        let st = serde_json::to_string(&UserAuthResponse::from(self))?;
-        st.respond_to(request)
-    }
-}
 
 #[derive(Serialize,Deserialize,Debug)]
 pub struct CreateUser{
@@ -80,6 +86,12 @@ impl CreateUser{
     }
 }
 
+impl Display for AuthError{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        <AuthError as Debug>::fmt(self,f)
+    }
+}
+
 impl Error for AuthError{}
 
 
@@ -95,8 +107,8 @@ impl From<serde_json::Error> for AuthError{
     }
 }
 
-impl<S: ToString> From<S> for AuthError{
-    fn from(s: S) -> Self {
+impl From<String> for AuthError{
+    fn from(s: String) -> Self {
         Self::Unknown(s.to_string())
     }
 }

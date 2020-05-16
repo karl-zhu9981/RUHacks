@@ -6,19 +6,20 @@
 
 use std::io::Read;
 use rocket::response::Body;
+use rocket::request::Form;
 
 #[get("/")]
 pub fn root() -> &'static str{
     "Hello World"
 }
 
-#[post("/auth")]
-pub fn auth<R: Read>(b: Body<R>) -> AuthUserResponse{
+#[post("/auth", format="json", data="<input>")]
+pub fn auth(input: Form<crypt::UserAuth>) -> crypt::UserAuthResponse{
     unimplemented!("Wire the Database")
 }
 
 pub mod crypt;
 
 pub fn main(){
-    rocket::ignite().mount("/",routes![root]).launch();
+    rocket::ignite().mount("/",routes![root,auth]).launch();
 }
