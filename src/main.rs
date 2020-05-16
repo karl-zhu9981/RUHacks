@@ -1,8 +1,9 @@
 #![feature(proc_macro_hygiene,decl_macro)]
-#![feature(try_trait)]
+#![feature(try_trait,specialization)]
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde;
+#[macro_use] extern crate bson;
 
 use std::io::Read;
 use rocket::response::Body;

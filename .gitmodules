@@ -1,0 +1,3 @@
+[submodule "RUHacks-UI"]
+	path = RUHacks-UI
+	url = https://github.com/jere-mie/RUHacks-UI.git

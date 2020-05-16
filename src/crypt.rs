@@ -10,12 +10,13 @@ use rocket::request::{FromRequest, Outcome};
 use rocket::outcome::IntoOutcome;
 use rocket::data::{FromData, Transformed, Transform, FromDataSimple};
 
+#[derive(Serialize,Deserialize)]
 pub struct UserItem{
-    hash_addr: [u8;64],
-    auth_salt: [u8;32],
-    passwd: [u8;64],
-    auth_part: [u8;32],
-    blind_key: Box<[u8]>
+    hash_addr: String,
+    auth_salt: String,
+    passwd: String,
+    auth_part: String,
+    blind_key: String
 }
 
 #[derive(Serialize,Deserialize,FromForm,Debug)]
@@ -32,11 +33,17 @@ pub enum UserAuthResponse{
     CreateUser{auth_part: String,response_identifier: String}
 }
 
-impl From<Result<&'_ UserItem,UserAuthResponse>> for UserAuthResponse{
-    fn from(r: Result<&UserItem, UserAuthResponse>) -> Self {
+default impl<E: Error> From<E> for UserAuthResponse{
+    fn from(e: E) -> Self {
+        Self::Error{code: 4,msg: e.to_string()}
+    }
+}
+
+impl From<Result<UserItem,UserAuthResponse>> for UserAuthResponse{
+    fn from(r: Result<UserItem, UserAuthResponse>) -> Self {
         match r{
             Ok(u) => UserAuthResponse::Success {
-                auth_part: base64::encode(u.auth_part),
+                auth_part: base64::encode(&u.auth_part),
                 blinded_key: base64::encode(&u.blind_key)
             },
             Err(e) => e
