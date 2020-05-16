@@ -9,17 +9,17 @@ use serde::export::fmt::Debug;
 use rocket::request::{FromRequest, Outcome};
 use rocket::outcome::IntoOutcome;
 use rocket::data::{FromData, Transformed, Transform, FromDataSimple};
+use serde::{Serialize,Deserialize};
 
-#[derive(Serialize,Deserialize)]
 pub struct UserItem{
-    hash_addr: String,
-    auth_salt: String,
-    passwd: String,
-    auth_part: String,
-    blind_key: String
+    pub(crate) hash_addr: String,
+    pub(crate) auth_salt: String,
+    pub(crate) passwd: String,
+    pub(crate) auth_part: String,
+    pub(crate) blind_key: String
 }
 
-#[derive(Serialize,Deserialize,FromForm,Debug)]
+#[derive(FromForm,Debug)]
 pub struct UserAuth{
     userid: String,
     password: String
@@ -33,14 +33,14 @@ pub enum UserAuthResponse{
     CreateUser{auth_part: String,response_identifier: String}
 }
 
-default impl<E: Error> From<E> for UserAuthResponse{
+impl<E: Error> From<E> for UserAuthResponse{
     fn from(e: E) -> Self {
         Self::Error{code: 4,msg: e.to_string()}
     }
 }
 
-impl From<Result<UserItem,UserAuthResponse>> for UserAuthResponse{
-    fn from(r: Result<UserItem, UserAuthResponse>) -> Self {
+impl UserAuthResponse{
+    fn from_result(r: Result<UserItem, UserAuthResponse>) -> Self {
         match r{
             Ok(u) => UserAuthResponse::Success {
                 auth_part: base64::encode(&u.auth_part),
@@ -72,7 +72,7 @@ impl<'r> Responder<'r> for UserAuthResponse{
 }
 
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(FromForm,Debug)]
 pub struct CreateUser{
     response_identifier: String,
     blinded_key: String
@@ -85,13 +85,6 @@ pub enum AuthError{
     Unknown(String)
 }
 
-impl CreateUser{
-    pub fn read<R: Read>(b: Body<R>) -> Result<Self,AuthError>{
-        let s = b.into_string()?;
-        let ret = serde_json::from_str(&s)?;
-        Ok(ret)
-    }
-}
 
 impl Display for AuthError{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

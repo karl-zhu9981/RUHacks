@@ -3,16 +3,13 @@
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate serde;
-#[macro_use] extern crate bson;
 
 use std::io::Read;
 use rocket::response::Body;
 use rocket::request::Form;
+use std::path::Path;
+use std::fs::File;
 
-#[get("/")]
-pub fn root() -> &'static str{
-    "Hello World"
-}
 
 #[post("/auth", format="json", data="<input>")]
 pub fn auth(input: Form<crypt::UserAuth>) -> crypt::UserAuthResponse{
@@ -23,5 +20,5 @@ pub mod crypt;
 pub mod auth;
 
 pub fn main(){
-    rocket::ignite().mount("/",routes![root,auth]).launch();
+    rocket::ignite().mount("/",routes![auth]).launch();
 }
