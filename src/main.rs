@@ -19,6 +19,7 @@ pub fn auth(input: Form<crypt::UserAuth>) -> crypt::UserAuthResponse{
 }
 
 pub mod crypt;
+pub mod auth;
 
 pub fn main(){
     rocket::ignite().mount("/",routes![root,auth]).launch();
