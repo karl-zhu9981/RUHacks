@@ -11,9 +11,9 @@ use std::path::Path;
 use std::fs::File;
 
 
-#[post("/", format="json", data="<input>")]
+#[post("/" data="<input>")]
 pub fn auth(input: Form<crypt::UserAuth>) -> crypt::UserAuthResponse{
-    unimplemented!("Wire the Database")
+    crypt::UserAuthReponse::Error{code: 42,msg: "Authentication is not implemented"}
 }
 
 pub mod crypt;
